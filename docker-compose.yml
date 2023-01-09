@@ -2,6 +2,8 @@ version: '2.13'
 
 volumes:
   pgdata:
+  static_volume:
+  media_volume:
 
 services:
 
@@ -10,18 +12,15 @@ services:
       context: .
       dockerfile: Dockerfile
     volumes:
-      - ./stocks_products/:/usr/src/app
-    # expose:
-    #   - 8000
-    ports:
-      - 8000:8000
+      - static_volume:/usr/src/app/static
+      - media_volume:/usr/src/app/media
+    expose:
+      - 8000
     env_file:
       - ./.env
     restart: always
-    command: >
-      sh -c "python manage.py makemigrations &&
-             python manage.py migrate &&
-             python manage.py runserver 0.0.0.0:8000"
+    command:
+      gunicorn stocks_products.wsgi:application --bind 0.0.0.0:8000 >
     depends_on:
       db:
         condition: service_healthy
@@ -36,17 +35,16 @@ services:
       - POSTGRES_PASSWORD=postgres
       - PGDATA=/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user1 -d stocks_products"] 
+      test: ["CMD-SHELL", "pg_isready -U postgres -d stocks_products"] 
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 10s
     restart: unless-stopped
     volumes:
-      # - .:/docker-entrypoint-initdb.d
       - ./logs:/var/log  
       - pgdata:/var/lib/postgresql/data  
-
+   
   pgadmin: 
     container_name: pgadmin_container
     image: dpage/pgadmin4:5.7
@@ -60,3 +58,12 @@ services:
       - "5050:80"
     restart: unless-stopped
 
+  nginx:
+    build: ./nginx
+    ports:
+      - 1337:80
+    volumes:
+      - static_volume:/usr/src/app/static
+      - media_volume:/usr/src/app/media
+    depends_on:
+      - web

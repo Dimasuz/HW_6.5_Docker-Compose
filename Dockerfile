@@ -15,7 +15,21 @@ RUN pip install --upgrade pip
 COPY ./stocks_products/requirements.txt .
 RUN pip install -r requirements.txt
 
+EXPOSE 8000
+
+  
+LABEL description="homework"
+
+# здесь можно указать переменные окружения
+ENV MY_ENV=homework
+
+# copy entrypoint.sh
+COPY ./stocks_products/entrypoint.sh .
+RUN sed -i 's/\r$//g' /usr/src/app/entrypoint.sh
+RUN chmod +x /usr/src/app/entrypoint.sh
+
 # копируем файлы проета
 COPY ./stocks_products .
 
-EXPOSE 8000
+# run entrypoint.sh
+ENTRYPOINT ["/usr/src/app/entrypoint.sh"]
